@@ -670,7 +670,7 @@ foreach ($element in $worker_array) {
 if ($miner_type -eq 'jce_cn_cpu_miner64') {
     
     # Configure the attributes for the mining software.
-    $worker_settings = "--auto --any --forever --keepalive --variation $jce_miner_variation --low -o $pool -u $wallet$fixed_diff -p $rigname --mport 8081 -t $jce_miner_threads --low "
+    $worker_settings = "--auto --any --forever --keepalive --variation $jce_miner_variation --low -o $pool -u $wallet$fixed_diff -p $rigname --mport 8081 -t $jce_miner_threads --low"
 }
 
 
