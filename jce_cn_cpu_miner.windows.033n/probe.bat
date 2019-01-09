@@ -1,1 +1,0 @@
-@call start.bat --probe
