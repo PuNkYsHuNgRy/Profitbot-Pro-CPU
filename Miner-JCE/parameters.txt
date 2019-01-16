@@ -44,12 +44,11 @@
                         15 = Cryptonight V8 fork of October-2018
                         16 = Pool-selected autoswitch
                         17 = Cryptolight-Dark
-                        18 = Cryptonight-FreeHaven/Swap fork of Nov-2018
-                        19 = Cryptolight-uPlexa fork of Dec-2018
-                        20 = Cryptolight-Turtle v2 fork of Dec-2018
-                        21 = Cryptonight-Stellite v8 fork of Dec-2018
-
---low                Mine with low priority not to freeze your computer. Has a very small impact on performances.
+                        18 = Cryptonight-FreeHaven/Swap
+                        19 = Cryptolight-uPlexa
+                        20 = Cryptolight-Turtle v2
+						
+--low                Miner with low priority not to freeze your computer. Has a very small impact on performances.
                      Recommended.
                      
 --ssl                Connect with SSL. Automatically enabled when your pool address is like ssl://......
@@ -90,14 +89,12 @@
                      
 -q                   Quit at first network problem. This is the opposite of --forever
 
---rig-id <id>        Additional rig-id at pool login.
-
 ***********************
 ***   Information   ***
 ***********************
 
 --help               Display a summary of this documentation.
 
---probe              List the mining-capable processors (and GPUs on the GPU version).
+--probe              List the mining-capable processors.
 
 --coins              List the coins known to the miner. Other coins can be mined with --any

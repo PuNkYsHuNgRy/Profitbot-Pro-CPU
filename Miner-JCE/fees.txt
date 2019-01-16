@@ -4,7 +4,6 @@ Devfees are:
   3.0% when using at least one mining thread with non-AES architecture
   3.0% when using 32-bits version
   1.5% when using only 64-bits AES architecture
-  0.9% on the GPUs if you use the GPU version
  80.0% when using the --donate parameter
 
 And no fees are taken during the first minute,
