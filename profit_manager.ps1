@@ -524,11 +524,6 @@ else {
 
 Write-Host "$TimeNow : Activating Worker on [$rigname]"
 
-# Get information about the GPU, print to screen
-Write-Host "$TimeNow : This system has the following GPU's:" -ForegroundColor Yellow
-foreach ($gpu in Get-WmiObject Win32_VideoController) {
-    if ($gpu.Description -notlike "*Intel*" -and $gpu.Description -notlike "*Microsoft*") {Write-Host "                       -"$gpu.Description}
-}
 Write-Host "$TimeNow : Configured to Mine: $best_coin <--------" -ForegroundColor Magenta
 
 # Pull in worker config information from coin_settings.conf
@@ -769,6 +764,10 @@ if ($not_in_list -eq 'yes') {
     Write-Host "$TimeNow : Worker is set to mine default coin: $best_coin." -ForegroundColor cyan
 }
 Write-Host " "
+
+#Set variable for counting hashrate stalls
+$waiting_hashrate = 0
+
 # Begin a loop to check if the current coin is the best coin to mine. If not, restart the app and switchin coins.
 Do { 
     if ($TimeNow -ge $TimeEnd) {
@@ -1006,7 +1005,20 @@ Do {
         }
     }
     else {
+        # Increment variable for counting hashrate stalls
+        $waiting_hashrate = $waiting_hashrate + 1
         Write-Host "$TimeNow : Waiting on worker to display hashrate." -ForegroundColor Yellow
+    }
+
+    # Restart worker if waiting_hashrate count is greater than 5
+    if ($worker_hashrate -ge 5) {
+        # Write to the log.
+        if (Test-Path $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log) {
+            Write-Output "$TimeNow : Reached max worker hashrate fail count. Restarting worker." | Out-File  -append $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log
+        }
+        # Clear all variables
+        Remove-Variable * -ErrorAction SilentlyContinue
+        ./profit_manager.ps1
     }
 
     # Variables to send to Miner API
