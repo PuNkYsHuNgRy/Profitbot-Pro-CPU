@@ -48,6 +48,7 @@
                         19 = Cryptolight-uPlexa
                         20 = Cryptolight-Turtle v2
                         21 = Cryptonight-Stellite/Masari v8
+                        22 = Cryptonight-Waltz/Graft
 						
 --low                Miner with low priority not to freeze your computer. Has a very small impact on performances.
                      Recommended.
