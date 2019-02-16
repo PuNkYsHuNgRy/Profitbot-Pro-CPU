@@ -44,13 +44,13 @@
                         15 = Cryptonight V8 fork of October-2018
                         16 = Pool-selected autoswitch
                         17 = Cryptolight-Dark
-                        18 = Cryptonight-FreeHaven/Swap
-                        19 = Cryptolight-uPlexa
-                        20 = Cryptolight-Turtle v2
-                        21 = Cryptonight-Stellite/Masari v8
+                        18 = Cryptonight-FreeHaven/Swap fork of Nov-2018
+                        19 = Cryptolight-uPlexa fork of Dec-2018
+                        20 = Cryptolight-Turtle v2 fork of Dec-2018
+                        21 = Cryptonight-Stellite/Masari v8 fork of Dec-2018
                         22 = Cryptonight-Waltz/Graft
-						
---low                Miner with low priority not to freeze your computer. Has a very small impact on performances.
+
+--low                Mine with low priority not to freeze your computer. Has a very small impact on performances.
                      Recommended.
                      
 --ssl                Connect with SSL. Automatically enabled when your pool address is like ssl://......
@@ -85,11 +85,13 @@
 
 --keepalive          Send keep-alives when the pool and the miner stay silent for a long time.
                      
---mport PORT         Json HTTP monitoring and managment port (default=disabled)
+--mport <PORT>       Json HTTP monitoring and managment port (default=disabled)
                      
 --stakjson           Output Json HTTP in XMR-Stak format when --mport is used. Ignored otherwise.
                      
 -q                   Quit at first network problem. This is the opposite of --forever
+
+--rig-id <id>        Additional rig-id at pool login. (optional)
 
 ***********************
 ***   Information   ***
@@ -97,6 +99,6 @@
 
 --help               Display a summary of this documentation.
 
---probe              List the mining-capable processors.
+--probe              List the mining-capable processors (and GPUs on the GPU version).
 
 --coins              List the coins known to the miner. Other coins can be mined with --any
