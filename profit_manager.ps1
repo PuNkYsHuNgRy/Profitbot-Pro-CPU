@@ -234,61 +234,68 @@ if ($get_settings.update_check -eq 'yes') {
             $original_settings.sleep_seconds = $original_settings.sleep_seconds   
             $original_settings.voice = $original_settings.voice
             $original_settings.version = $web_version
-            if ($original_settings.stop_worker_delay -ne $null) {
-                $original_settings.stop_worker_delay = $original_settings.stop_worker_delay
-            }
-            else {
+            if (!$original_settings.stop_worker_delay) {
                 $original_settings | add-member -Name "stop_worker_delay" -value "5" -MemberType NoteProperty
             }
-            if ($original_settings.enable_coin_data -ne $null) {
-                $original_settings.enable_coin_data = $original_settings.enable_coin_data
-            }
             else {
+                $original_settings.stop_worker_delay = $original_settings.stop_worker_delay                
+            }
+            if (!$original_settings.enable_coin_data) {
                 $original_settings | add-member -Name "enable_coin_data" -value "yes" -MemberType NoteProperty
             }
-            if ($original_settings.mine_cpu -ne $null) {
-                $original_settings.mine_cpu = $original_settings.mine_cpu
-            }
             else {
+                $original_settings.enable_coin_data = $original_settings.enable_coin_data                
+            }
+            if (!$original_settings.mine_cpu) {
                 $original_settings | add-member -Name "mine_cpu" -value "yes" -MemberType NoteProperty
             }
-            if ($original_settings.mine_amd -ne $null) {
-                $original_settings.mine_amd = $original_settings.mine_amd
-            }
             else {
+                $original_settings.mine_cpu = $original_settings.mine_cpu                
+            }
+            if (!$original_settings.mine_amd) {
                 $original_settings | add-member -Name "mine_amd" -value "yes" -MemberType NoteProperty
             }
-            if ($original_settings.mine_nvidia -ne $null) {
-                $original_settings.mine_nvidia = $original_settings.mine_nvidia
-            }
             else {
+                $original_settings.mine_amd = $original_settings.mine_amd                
+            }
+            if (!$original_settings.mine_nvidia) {
                 $original_settings | add-member -Name "mine_nvidia" -value "yes" -MemberType NoteProperty
             }
-            if ($original_settings.rig_name -ne $null) {
+            else {
+                $original_settings.mine_nvidia = $original_settings.mine_nvidia                
+            }
+            if (!$original_settings.rig_name) {
+                $original_settings | add-member -Name "rig_name" -value "" -MemberType NoteProperty
+                $original_settings.rig_name = $pc
+            }
+            else {
                 $original_settings.rig_name = $original_settings.rig_name
             }
-            else {
-                $original_settings | add-member -Name "rig_name" -value "" -MemberType NoteProperty
-            }
-            if ($original_settings.api_key -ne $null) {
-                $original_settings.api_key = $original_settings.api_key
-            }
-            else {
+            if (!$original_settings.api_key) {
                 $original_settings | add-member -Name "api_key" -value "" -MemberType NoteProperty
             }
-            if ($original_settings.jce_miner_threads -ne $null) {
-                $original_settings.jce_miner_threads = $original_settings.jce_miner_threads
+            else {
+                $original_settings.api_key = $original_settings.api_key 
+            }
+            if (!$original_settings.jce_miner_threads) {
+                $original_settings | add-member -Name "jce_miner_threads" -value "2" -MemberType NoteProperty                
             }
             else {
-                $original_settings | add-member -Name "jce_miner_threads" -value "2" -MemberType NoteProperty
-            }
-            if ($original_settings.jce_miner_threads -ne $null) {
                 $original_settings.jce_miner_threads = $original_settings.jce_miner_threads
             }
-            else {
-                $original_settings | add-member -Name "jce_miner_threads" -value "2" -MemberType NoteProperty
+            if (!$original_settings.enable_set_gpu_clocks) {
+                $original_settings | add-member -Name "enable_set_gpu_clocks" -value "no" -MemberType NoteProperty                
             }
-            $original_settings | ConvertTo-Json -Depth 10 | set-content 'settings.conf' 
+            else {
+                $original_settings.enable_set_gpu_clocks = $original_settings.enable_set_gpu_clocks
+            }
+            if (!$original_settings.file_set_gpu_clocks) {
+                $original_settings | add-member -Name "file_set_gpu_clocks" -value "set_gpu.bat" -MemberType NoteProperty                
+            }
+            else {
+                $original_settings.file_set_gpu_clocks = $original_settings.file_set_gpu_clocks
+            }
+            $original_settings | ConvertTo-Json -Depth 10 | set-content 'settings.conf'
             
             Write-Host "$TimeNow : Removing lockfile." -ForegroundColor White
             Remove-Item lockfile.lock
@@ -326,6 +333,18 @@ $thread_error_count = 0
 
 # Set date/time
 $Timenow = get-date
+
+#Check if set GPU clock params are null.
+$enable_set_gpu_clocks = $get_settings.enable_set_gpu_clocks
+if(!$enable_set_gpu_clocks){
+    # Param is null
+    $enable_set_gpu_clocks = "no"
+}
+$file_set_gpu_clocks = $get_settings.file_set_gpu_clocks
+if(!$file_set_gpu_clocks){
+    # Param is null
+    $file_set_gpu_clocks = "ignore"
+}
 
 # Set the variation to auto (depends if pool supports)
 $jce_miner_variation = $get_settings.jce_miner_variation
