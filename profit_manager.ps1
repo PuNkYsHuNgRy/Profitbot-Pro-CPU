@@ -409,7 +409,21 @@ else {
     # Pick the most profitable coin to mine from the top 10 list.
     Write-Host "$TimeNow : Connecting to Profitbot Pro API." -ForegroundColor Magenta
     Write-Host "$TimeNow : Retreiving list of coins." -ForegroundColor Magenta
-    $get_coin = Invoke-RestMethod -Uri "https://$update_url" -Method Get 
+    try {
+        $get_coin = Invoke-RestMethod -Uri "https://$update_url" -Method Get 
+    }
+    catch {
+        $TimeNow = Get-Date
+        $ErrorMessage = $_.Exception.Message
+        $FailedItem = $_.Exception.ItemName
+        Write-Host "$TimeNow : Worker has discovered an error:" $ErrorMessage -ForegroundColor Cyan
+        # add error to the log.
+        if ($enable_log -eq 'yes') {
+            if (Test-Path $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log) {
+                Write-Output "$TimeNow : Error encountered - $errormessage I was mining $best_coin, and using $miner_type when the error occured." | Out-File  -append $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log
+            }
+        }
+    }
     
     # Cycle through the API's top list of coins, report error & restart if null.
     Try {
@@ -907,7 +921,21 @@ Do {
     
 
     # Refresh coin values
-    $get_coin = Invoke-RestMethod -Uri "https://$update_url" -Method Get 
+    try {
+        $get_coin = Invoke-RestMethod -Uri "https://$update_url" -Method Get 
+    }
+    catch {
+        $TimeNow = Get-Date
+        $ErrorMessage = $_.Exception.Message
+        $FailedItem = $_.Exception.ItemName
+        Write-Host "$TimeNow : Worker has discovered an error:" $ErrorMessage -ForegroundColor Cyan
+        # add error to the log.
+        if ($enable_log -eq 'yes') {
+            if (Test-Path $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log) {
+                Write-Output "$TimeNow : Error encountered - $errormessage I was mining $best_coin, and using $miner_type when the error occured." | Out-File  -append $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log
+            }
+        }
+    }
     # Set coin variables from API
     $symbol = $get_coin | Where-Object { $_.Symbol -like $best_coin } | Select-Object -ExpandProperty symbol
     $coin_name = $get_coin | Where-Object { $_.Symbol -like $best_coin } | Select-Object -ExpandProperty coin_name
