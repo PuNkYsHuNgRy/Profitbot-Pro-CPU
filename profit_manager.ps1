@@ -292,6 +292,12 @@ if ($get_settings.update_check -eq 'yes') {
             if (!$original_settings.file_set_gpu_clocks) {
                 $original_settings | add-member -Name "file_set_gpu_clocks" -value "set_gpu_clock.bat" -MemberType NoteProperty                
             }
+            if (!$original_settings.minutes_no_accepts) {
+                $original_settings | add-member -Name "minutes_no_accepts" -value "5" -MemberType NoteProperty                
+            }
+            else {
+                $original_settings.minutes_no_accepts= $original_settings.minutes_no_accepts
+            }
             else {
                 $original_settings.file_set_gpu_clocks = $original_settings.file_set_gpu_clocks
             }
@@ -330,9 +336,15 @@ $mine_cpu = $get_settings.mine_cpu
 $mine_amd = $get_settings.mine_amd
 $mine_nvidia = $get_settings.mine_nvidia
 $thread_error_count = 0
+$minutes_no_accepts = $get_settings.$minutes_no_accepts
 
 # Set date/time
 $Timenow = get-date
+
+# Check to see if minutes_no_accepts is null
+if (!$minutes_no_accepts) {
+    $minutes_no_accepts = 5
+}
 
 #Check if set GPU clock params are null.
 $enable_set_gpu_clocks = $get_settings.enable_set_gpu_clocks
@@ -556,7 +568,7 @@ else {
 }
 
 Write-Host "$TimeNow : Activating Worker on [$rigname]"
-
+Write-Host "$TimeNow : Share-Accepts Timer is set to $minutes_no_accepts minutes." -ForegroundColor White
 Write-Host "$TimeNow : Configured to Mine: $best_coin <--------" -ForegroundColor Magenta
 
 # Pull in worker config information from coin_settings.conf
@@ -774,7 +786,7 @@ if (Test-Path $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log) {
     Write-Output "$TimeNow : Starting the worker $miner_type." | Out-File  -append $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log
 }
 start-process -FilePath $miner_app -args $worker_settings -WindowStyle Minimized
-Start-Sleep -Seconds 2
+Start-Sleep -Seconds 5
 $TimeNow = Get-Date
 $check_worker_running = Get-Process $miner_type -ErrorAction SilentlyContinue
 if ($check_worker_running -eq $null) {
@@ -983,6 +995,38 @@ Do {
         }
     }
 
+    # Set accept increment parameters to determine if accepts are incrementing within a reasonable amount of time, or not at all.
+    if (!$previous_accept_increment_value){
+        $accept_increment_value = $my_accepted_shares
+        $accept_increment_time = Get-Date
+        Write-Host "$TimeNow : Previous accept increment is null, setting to $accept_increment_value ($accept_increment_time)." -ForegroundColor Gray
+    }
+    else {
+        if ($previous_accept_increment_value -lt $my_accepted_shares) {
+            $accept_increment_value = $my_accepted_shares
+            $accept_increment_time = Get-Date
+            # Write-Host "$TimeNow : Accept increment is now $accept_increment_value. ($accept_increment_time)" -ForegroundColor Gray
+        }
+        else {
+            $TimeNow = Get-Date
+            $duration = $TimeNow - $previous_accept_increment_time
+            $accept_increment_value = $previous_accept_increment_value
+            $accept_increment_time = $previous_accept_increment_time
+            $last_accept_duration = $duration.TotalSeconds
+            $last_accept_duration_mins = ($last_accept_duration / 60)
+
+            if ($previous_accept_increment_value -le $my_accepted_shares -and $last_accept_duration_mins -lt $minutes_no_accepts) {
+                $TimeNow = Get-Date
+                Write-Host "$TimeNow : Last Accept was $last_accept_duration seconds ago." -ForegroundColor Yellow
+            }
+            else{
+                $TimeNow = Get-Date
+                Write-Host "$TimeNow : Last Accept was $last_accept_duration seconds ago. Timer exceeded!" -ForegroundColor Red 
+            }
+        }
+        
+    }
+
     # Calculate the worker hashrate and accepted shares.
     $suggested_diff = [math]::Round($worker_hashrate * 30)
     if ($worker_hashrate -match "[0-9]" -and $worker_hashrate -ne "0" -and $null -ne $worker_hashrate) {
@@ -1095,6 +1139,28 @@ Do {
     Remove-Variable get_coin -ErrorAction SilentlyContinue
     Remove-Variable last_updated -ErrorAction SilentlyContinue
     Start-Sleep -Seconds $set_sleep
+
+    #If cannot get sleep seconds from the config file, clear all variables and restart
+    try {
+        Start-Sleep -Seconds $set_sleep
+    }
+    catch {
+        $TimeNow = Get-Date
+        # Write to the log.
+        if (Test-Path $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log) {
+            Write-Output "$TimeNow : Cannot read from config. The worker is now restarting." | Out-File  -append $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log
+        }
+        # Clear all variables
+        Remove-Variable * -ErrorAction SilentlyContinue
+
+        # Reload the worker.
+        .\profit_manager.ps1
+    }
+    # Record the previous accept value and time
+    $previous_accept_increment_value = $accept_increment_value
+    $previous_accept_increment_time = $accept_increment_time
+    $TimeNow = Get-Date
+    Write-Host "$TimeNow : Previous accept increment is now $previous_accept_increment_value ($previous_accept_increment_time)." -ForegroundColor Gray
 }
 While ($best_coin -eq $best_coin_check)
 
