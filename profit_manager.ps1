@@ -336,7 +336,7 @@ $mine_cpu = $get_settings.mine_cpu
 $mine_amd = $get_settings.mine_amd
 $mine_nvidia = $get_settings.mine_nvidia
 $thread_error_count = 0
-$minutes_no_accepts = $get_settings.$minutes_no_accepts
+$minutes_no_accepts = $get_settings.minutes_no_accepts
 
 # Set date/time
 $Timenow = get-date
@@ -690,7 +690,7 @@ foreach ($element in $worker_array) {
         if (Test-Path $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log) {
             Write-Output "$TimeNow : $element is already running, attempting to stop." | Out-File  -append $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log
         }
-        Write-Host "$TimeNow : Worker already running, stopping process." -ForegroundColor Red
+        Write-Host "$TimeNow : Worker is still running, stopping process." -ForegroundColor Red
         # try gracefully first
         $worker_running.CloseMainWindow() | out-null
         # kill after five seconds
@@ -902,14 +902,30 @@ Do {
     # Check if worker url is working, then get the current hashrate from mining software
     $TimeNow = Get-Date
     Start-Sleep -Seconds 5
-    $statusCode = Invoke-WebRequest http://127.0.0.1:8081 | % {$_.StatusCode}
+    
+    try {
+        $statusCode = Invoke-WebRequest http://127.0.0.1:8080 | % {$_.StatusCode} 
+    }
+    catch {
+        $TimeNow = Get-Date
+        $ErrorMessage = $_.Exception.Message
+        $FailedItem = $_.Exception.ItemName
+        Write-Host "$TimeNow : Worker has discovered an error:" $ErrorMessage -ForegroundColor Cyan
+        # add error to the log.
+        if ($enable_log -eq 'yes') {
+            if (Test-Path $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log) {
+                Write-Output "$TimeNow : Error encountered - $errormessage I was mining $best_coin, and using $miner_type when the error occured. http://127.0.0.1:8080" | Out-File  -append $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log
+            }
+        }
+    }
+    
     If ($statusCode -eq 200) {
     }
     Else {
         Write-Host "$TimeNow : Worker is taking a little longer than expected to start." -ForegroundColor Yellow
         Start-Sleep -Seconds 10
     }
-    
+        
     try {
         $statusCode = Invoke-WebRequest http://127.0.0.1:8081 | % {$_.StatusCode}
     }
@@ -996,16 +1012,16 @@ Do {
     }
 
     # Set accept increment parameters to determine if accepts are incrementing within a reasonable amount of time, or not at all.
-    if (!$previous_accept_increment_value){
+    if (!$previous_accept_increment_value -and $previous_accept_increment_value -ne 0){
         $accept_increment_value = $my_accepted_shares
         $accept_increment_time = Get-Date
-        Write-Host "$TimeNow : Previous accept increment is null, setting to $accept_increment_value ($accept_increment_time)." -ForegroundColor Gray
+        Write-Host "$TimeNow : Previous accept increment is null, setting to $accept_increment_value." -ForegroundColor Gray
     }
     else {
         if ($previous_accept_increment_value -lt $my_accepted_shares) {
             $accept_increment_value = $my_accepted_shares
             $accept_increment_time = Get-Date
-            # Write-Host "$TimeNow : Accept increment is now $accept_increment_value. ($accept_increment_time)" -ForegroundColor Gray
+            # Write-Host "$TimeNow : Accept increment is $accept_increment_value. ($accept_increment_time)" -ForegroundColor Gray
         }
         else {
             $TimeNow = Get-Date
@@ -1014,14 +1030,49 @@ Do {
             $accept_increment_time = $previous_accept_increment_time
             $last_accept_duration = $duration.TotalSeconds
             $last_accept_duration_mins = ($last_accept_duration / 60)
+            $last_accept_duration = [decimal][math]::Round(($last_accept_duration),0)
+            
 
-            if ($previous_accept_increment_value -le $my_accepted_shares -and $last_accept_duration_mins -lt $minutes_no_accepts) {
+            if ($last_accept_duration_mins -lt $minutes_no_accepts) {
                 $TimeNow = Get-Date
                 Write-Host "$TimeNow : Last Accept was $last_accept_duration seconds ago." -ForegroundColor Yellow
             }
             else{
                 $TimeNow = Get-Date
-                Write-Host "$TimeNow : Last Accept was $last_accept_duration seconds ago. Timer exceeded!" -ForegroundColor Red 
+                Write-Host "$TimeNow : Last Accept was $last_accept_duration seconds ago. $minutes_no_accepts minutes exceeded!" -ForegroundColor Red
+                $filename = "$path\coin_settings.conf"
+                [regex]$pattern="$symbol"
+                $newsymbol = ("$symbol" + "_ignored")
+                $pattern.replace([IO.File]::ReadAllText($filename),"$newsymbol",1) | set-content $filename
+                Write-Host "$TimeNow : Restarting the worker now, and flagging $symbol as ignored." -ForegroundColor Yellow
+                if ($enable_log -eq 'yes') {
+                    if (Test-Path $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log) {
+                        Write-Output "$TimeNow : $symbol was having issues, so we had to ignore it. We've renamed the file to: $newsymbol." | Out-File  -append $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log
+                    }
+                }
+                # Wait for the executable to stop before continuing.
+                $worker_running = Get-Process $miner_type -ErrorAction SilentlyContinue
+                if ($worker_running) {
+                    # Write to the log.
+                    if (Test-Path $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log) {
+                        Write-Output "$TimeNow : Attempting to stop $miner_type." | Out-File  -append $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log
+                    }
+                    Write-Host "$TimeNow : Stopping Worker process." -ForegroundColor Red
+                    # try gracefully first
+                    $worker_running.CloseMainWindow() | Out-Null
+                    # kill after five seconds
+                    Write-Host "$TimeNow : Worker is still running, stopping process." -ForegroundColor Yellow
+                    Start-Sleep $stop_worker_delay
+                    if (!$worker_running.HasExited) {
+                        Write-Host "$TimeNow : Worker process has not halted, forcing process to stop." -ForegroundColor Red
+                        $worker_running | Stop-Process -Force | Out-Null
+                    }
+                }
+                Write-Host "$TimeNow : Successfully stopped miner process, reloading." -ForegroundColor Yellow
+                Start-Sleep 5
+                # Clear all variables
+                Remove-Variable * -ErrorAction SilentlyContinue
+                ./profit_manager.ps1
             }
         }
         
@@ -1138,7 +1189,7 @@ Do {
     Remove-Variable i -ErrorAction SilentlyContinue
     Remove-Variable get_coin -ErrorAction SilentlyContinue
     Remove-Variable last_updated -ErrorAction SilentlyContinue
-    Start-Sleep -Seconds $set_sleep
+
 
     #If cannot get sleep seconds from the config file, clear all variables and restart
     try {
@@ -1160,7 +1211,7 @@ Do {
     $previous_accept_increment_value = $accept_increment_value
     $previous_accept_increment_time = $accept_increment_time
     $TimeNow = Get-Date
-    Write-Host "$TimeNow : Previous accept increment is now $previous_accept_increment_value ($previous_accept_increment_time)." -ForegroundColor Gray
+    Write-Host "$TimeNow : Previous accept increment is $previous_accept_increment_value." -ForegroundColor Gray
 }
 While ($best_coin -eq $best_coin_check)
 
@@ -1222,7 +1273,7 @@ if ($worker_running) {
     # try gracefully first
     $worker_running.CloseMainWindow() | Out-Null
     # kill after five seconds
-    Write-Host "$TimeNow : Worker already running, stopping process." -ForegroundColor Yellow
+    Write-Host "$TimeNow : Worker is still running, stopping process." -ForegroundColor Yellow
     Sleep $stop_worker_delay
     if (!$worker_running.HasExited) {
         Write-Host "$TimeNow : Worker process has not halted, forcing process to stop." -ForegroundColor Red
