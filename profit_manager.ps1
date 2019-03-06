@@ -292,14 +292,14 @@ if ($get_settings.update_check -eq 'yes') {
             if (!$original_settings.file_set_gpu_clocks) {
                 $original_settings | add-member -Name "file_set_gpu_clocks" -value "set_gpu_clock.bat" -MemberType NoteProperty                
             }
+            else {
+                $original_settings.file_set_gpu_clocks = $original_settings.file_set_gpu_clocks
+            }
             if (!$original_settings.minutes_no_accepts) {
                 $original_settings | add-member -Name "minutes_no_accepts" -value "5" -MemberType NoteProperty                
             }
             else {
                 $original_settings.minutes_no_accepts= $original_settings.minutes_no_accepts
-            }
-            else {
-                $original_settings.file_set_gpu_clocks = $original_settings.file_set_gpu_clocks
             }
             $original_settings | ConvertTo-Json -Depth 10 | set-content 'settings.conf'
             
