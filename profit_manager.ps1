@@ -648,6 +648,9 @@ else {
 if ($miner_type -eq 'jce_cn_cpu_miner64') {
     Set-Variable -Name "miner_app" -Value "$path\Miner-JCE\jce_cn_cpu_miner64.exe"
 }
+if ($miner_type -eq 'xmrig') {
+    Set-Variable -Name "miner_app" -Value "$path\Miner-xmrig\xmrig.exe"
+}
 
 Write-Host "$TimeNow : Setting Mining Application to $miner_type"
 
@@ -679,7 +682,7 @@ else {
 # If previous worker is running, kill the process.
 
 # List of mining software processes
-$worker_array = @("jce_cn_cpu_miner64")
+$worker_array = @("jce_cn_cpu_miner64", "xmrig")
 
 # Loop through each miner process, and kill the one that's running
 foreach ($element in $worker_array) {
@@ -712,7 +715,10 @@ if ($miner_type -eq 'jce_cn_cpu_miner64') {
     # Configure the attributes for the mining software.
     $worker_settings = "--auto --any --forever --keepalive --variation $jce_miner_variation --low -o $pool -u $wallet$fixed_diff -p $rigname --mport 8081 -t $jce_miner_threads --low"
 }
-
+elseif ($miner_type -eq 'xmrig') {
+    $logfile = "$(get-date -f yyyy-MM-dd).log"
+    $worker_settings = "--log-file=$path\Miner-xmrig\$logfile --api-port=8081 --threads=$jce_miner_threads --donate-level=1 --algo=$algo --url=$pool --user=$wallet$fixed_diff --pass=$rigname --rig-id=$rigname"
+}
 
 Write-Host "$TimeNow : Starting $miner_type in another window."
 
@@ -1010,7 +1016,34 @@ Do {
             ./profit_manager.ps1
         }
     }
-
+    
+    elseif ($miner_type -eq 'xmrig') {
+        Try {
+            $get_hashrate = Invoke-RestMethod -Uri "http://127.0.0.1:8081" -Method Get
+            $worker_hashrate = $get_hashrate.hashrate.total[0]
+            $my_accepted_shares = $get_hashrate.results.shares_good
+            $total_shares = $get_hashrate.results.shares_total
+            $my_rejected_shares = ($total_shares - $my_accepted_shares)
+        }
+        Catch {
+            $TimeNow = Get-Date
+            $ErrorMessage = $_.Exception.Message
+            $FailedItem = $_.Exception.ItemName
+            Write-Host "$TimeNow : Worker has discovered an error:" $ErrorMessage -ForegroundColor Cyan
+            Write-Host "$TimeNow : If xmrig does not have its HTTP API enabled, we cannot get the hashrate." -ForegroundColor Yellow
+            Write-Host "$TimeNow : Restarting the worker now. If this happens again, please refer to logs." -ForegroundColor Yellow
+            # Write to the log.
+            if ($enable_log -eq 'yes') {
+                if (Test-Path $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log) {
+                    Write-Output "$TimeNow : Error encountered - $errormessage Restarting worker." | Out-File  -append $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log
+                }
+            }
+            Start-Sleep 5
+            # Clear all variables
+            Remove-Variable * -ErrorAction SilentlyContinue
+            ./profit_manager.ps1
+        }
+    }
     # Set accept increment parameters to determine if accepts are incrementing within a reasonable amount of time, or not at all.
     if (!$previous_accept_increment_value -and $previous_accept_increment_value -ne 0){
         $accept_increment_value = $my_accepted_shares
