@@ -580,6 +580,12 @@ $pool = $get_coin_settings.mining_params | Where-Object { $_.Symbol -like $best_
 $wallet = $get_coin_settings.mining_params | Where-Object { $_.Symbol -like $best_coin } | Select-Object -ExpandProperty wallet
 $amd_config_file = $get_coin_settings.mining_params | Where-Object { $_.Symbol -like $best_coin } | Select-Object -ExpandProperty amd_config_file
 $payment_id = $get_coin_settings.mining_params | Where-Object { $_.Symbol -like $best_coin } | Select-Object -ExpandProperty payment_id
+$rig_password = $get_coin_settings.mining_params | Where-Object { $_.Symbol -like $best_coin } | Select-Object -ExpandProperty password
+
+# If password is empty, set tp the same of the rig. If it's not empty, use password or merged mining.
+if (!$rig_password) {
+    $rig_password = $rigname
+}
 
 
 if ($miner_type -eq 'jce_cn_cpu_miner64') {
@@ -713,11 +719,11 @@ foreach ($element in $worker_array) {
 if ($miner_type -eq 'jce_cn_cpu_miner64') {
     
     # Configure the attributes for the mining software.
-    $worker_settings = "--auto --any --forever --keepalive --variation $jce_miner_variation --low -o $pool -u $wallet$fixed_diff -p $rigname --mport 8081 -t $jce_miner_threads --low"
+    $worker_settings = "--auto --any --forever --keepalive --variation $jce_miner_variation --low -o $pool -u $wallet$fixed_diff -p $rig_password --mport 8081 -t $jce_miner_threads --low"
 }
 elseif ($miner_type -eq 'xmrig') {
     $logfile = "$(get-date -f yyyy-MM-dd).log"
-    $worker_settings = "--log-file=$path\Miner-xmrig\$logfile --api-port=8081 --threads=$jce_miner_threads --donate-level=1 --algo=$algo --url=$pool --user=$wallet$fixed_diff --pass=$rigname --rig-id=$rigname"
+    $worker_settings = "--log-file=$path\Miner-xmrig\$logfile --api-port=8081 --threads=$jce_miner_threads --donate-level=1 --algo=$algo --url=$pool --user=$wallet$fixed_diff --pass=$rig_password --rig-id=$rigname"
 }
 
 Write-Host "$TimeNow : Starting $miner_type in another window."
