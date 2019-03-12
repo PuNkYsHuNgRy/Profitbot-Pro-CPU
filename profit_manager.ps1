@@ -956,7 +956,7 @@ Do {
     Start-Sleep -Seconds 5
     
     try {
-        $statusCode = Invoke-WebRequest http://127.0.0.1:8080 | % {$_.StatusCode} 
+        $statusCode = Invoke-WebRequest http://127.0.0.1:8081 | % {$_.StatusCode} 
     }
     catch {
         $TimeNow = Get-Date
@@ -966,7 +966,7 @@ Do {
         # add error to the log.
         if ($enable_log -eq 'yes') {
             if (Test-Path $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log) {
-                Write-Output "$TimeNow : Error encountered - $errormessage I was mining $best_coin, and using $miner_type when the error occured. http://127.0.0.1:8080" | Out-File  -append $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log
+                Write-Output "$TimeNow : Error encountered - $errormessage I was mining $best_coin, and using $miner_type when the error occured. http://127.0.0.1:8081" | Out-File  -append $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log
             }
         }
     }
@@ -1012,7 +1012,7 @@ Do {
         # add error to the log.
         if ($enable_log -eq 'yes') {
             if (Test-Path $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log) {
-                Write-Output "$TimeNow : Error encountered - $errormessage I was mining $best_coin, and using $miner_type when the error occured. http://127.0.0.1:8080" | Out-File  -append $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log
+                Write-Output "$TimeNow : Error encountered - $errormessage I was mining $best_coin, and using $miner_type when the error occured. http://127.0.0.1:8081" | Out-File  -append $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log
             }
         }
     }
