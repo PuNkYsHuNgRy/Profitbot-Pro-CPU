@@ -681,7 +681,9 @@ else {
     Write-Host "$TimeNow : Could not find Pools.txt file, there is nothing to delete. (OK!)" -ForegroundColor Green
 }
 # These are the default apps used for mining. Updated software can be found on Github.
-
+if ($miner_type -eq 'xmr-stak') {
+    Set-Variable -Name "miner_app" -Value "$path\Miner-XMRstak\xmr-stak.exe"
+}
 if ($miner_type -eq 'jce_cn_cpu_miner64') {
     Set-Variable -Name "miner_app" -Value "$path\Miner-JCE\jce_cn_cpu_miner64.exe"
 }
@@ -719,7 +721,7 @@ else {
 # If previous worker is running, kill the process.
 
 # List of mining software processes
-$worker_array = @("jce_cn_cpu_miner64", "xmrig")
+$worker_array = @("jce_cn_cpu_miner64", "xmrig","xmr-stak")
 
 # Loop through each miner process, and kill the one that's running
 foreach ($element in $worker_array) {
@@ -751,6 +753,35 @@ if ($miner_type -eq 'jce_cn_cpu_miner64') {
     
     # Configure the attributes for the mining software.
     $worker_settings = "--auto --any --forever --keepalive --variation $jce_miner_variation --low -o $pool -u $wallet$fixed_diff -p $rig_password --mport 8081 -t $jce_miner_threads --low"
+}
+elseif ($miner_type -eq 'xmr-stak') {
+    # Set switches for mining CPU, AMD, NVIDIA
+    if ($mine_cpu -eq "yes") {
+        $cpu_param = "--cpu $path\$pc\cpu.txt"
+        Write-Host "$TimeNow : CPU Mining is Enabled." -ForegroundColor Cyan
+    }
+    else {
+        $cpu_param = "--noCPU"
+        Write-Host "$TimeNow : CPU Mining is Disabled." -ForegroundColor Cyan
+    }
+    if ($mine_amd -eq "yes") {
+        $amd_param = "--amd $path\$pc\$amd_config_file"
+        Write-Host "$TimeNow : AMD Mining is Enabled." -ForegroundColor Cyan
+    }
+    else {
+        $amd_param = "--noAMD"
+        Write-Host "$TimeNow : AMD Mining is Disabled." -ForegroundColor Cyan
+    }
+    if ($mine_nvidia -eq "yes") {
+        $nvidia_param = "--nvidia $path\$pc\nvidia.txt"
+        Write-Host "$TimeNow : Nvidia Mining is Enabled." -ForegroundColor Cyan
+    }
+    else {
+        $nvidia_param = "--noNVIDIA"
+        Write-Host "$TimeNow : Nvidia Mining is Disabled." -ForegroundColor Cyan
+    }
+    # Configure the attributes for the mining software.
+    $worker_settings = "--poolconf $path\$pc\pools.txt --config $path\$config --currency $algo --url $pool --user $wallet$fixed_diff --rigid $rigname --pass $rig_password $cpu_param $amd_param $nvidia_param"
 }
 elseif ($miner_type -eq 'xmrig') {
     $logfile = "$(get-date -f yyyy-MM-dd).log"
@@ -1081,7 +1112,33 @@ Do {
             ./profit_manager.ps1
         }
     }
-    
+    elseif ($miner_type -eq 'xmr-stak') {
+        Try {
+            $get_hashrate = Invoke-RestMethod -Uri "http://127.0.0.1:8081/api.json" -Method Get
+            $worker_hashrate = $get_hashrate.hashrate.total[0]
+            $my_accepted_shares = $get_hashrate.results.shares_good
+            $total_shares = $get_hashrate.results.shares_total
+            $my_rejected_shares = ($total_shares - $my_accepted_shares)
+        }
+        Catch {
+            $TimeNow = Get-Date
+            $ErrorMessage = $_.Exception.Message
+            $FailedItem = $_.Exception.ItemName
+            Write-Host "$TimeNow : Worker has discovered an error:" $ErrorMessage -ForegroundColor Cyan
+            Write-Host "$TimeNow : If Worker does not have its HTTP API enabled, we cannot get the hashrate." -ForegroundColor Yellow
+            Write-Host "$TimeNow : Restarting the worker now. If this happens again, please refer to logs." -ForegroundColor Yellow
+            # Write to the log.
+            if ($enable_log -eq 'yes') {
+                if (Test-Path $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log) {
+                    Write-Output "$TimeNow : Error encountered - $errormessage Restarting worker." | Out-File  -append $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log
+                }
+            }
+            Start-Sleep 5
+            # Clear all variables
+            Remove-Variable * -ErrorAction SilentlyContinue
+            ./profit_manager.ps1
+        }
+    }
     elseif ($miner_type -eq 'xmrig') {
         Try {
             $get_hashrate = Invoke-RestMethod -Uri "http://127.0.0.1:8081" -Method Get
@@ -1213,10 +1270,6 @@ Do {
                 Remove-Variable * -ErrorAction SilentlyContinue
                 ./profit_manager.ps1
             }           
-            # Hotfix for LOKI
-            if ($symbol -eq 'LOKI') {
-                $reward_24H = ($reward_24H / 2)
-            }
 
             # Caclulate daily profit in USD if not null
             Try {
