@@ -103,7 +103,22 @@ $coin_settings_path = "$my_path\Previous_Version\coin_settings.conf"
 
 # If check for updates is enabled, pull in version information.
 if ($get_settings.update_check -eq 'yes') {
-    $check_update = Invoke-RestMethod -Uri "https://$upgrade_url" -Method Get
+    try {
+        $check_update = Invoke-RestMethod -Uri "https://$upgrade_url" -Method Get
+    }
+    catch {
+        Write-Host "$TimeNow : There is an error connecting to api.profitbotpro.com. Pausing for 60 seconds. " -ForegroundColor Red
+        if ($enable_log -eq 'yes') {
+            # Write to the log
+            if (Test-Path $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log) {
+                Write-Output "There is an error connecting to api.profitbotpro.com. Pausing for 60 seconds." | Out-File  -append $path\$pc\$pc"_"$(get-date -f yyyy-MM-dd).log
+            }
+        }
+        Start-Sleep -Seconds 60
+        $check_update = Invoke-RestMethod -Uri "https://$upgrade_url" -Method Get
+
+    }
+    
     $web_version = $check_update.version
     $installed_settings_version = $get_settings.version
     $installed_coin_settings_version = $get_coin_settings.version
